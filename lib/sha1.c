@@ -10,6 +10,9 @@
 #include <memory.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef __unix__
+#include <sys/types.h> /* make sure macros like _BIG_ENDIAN visible */
+#endif
 #endif
 
 #ifdef SHA1DC_CUSTOM_INCLUDE_SHA1_C
@@ -69,6 +72,13 @@
 
 #else /* Not under GCC-alike or glibc */
 
+/* *BSD and newlib (embeded linux, cygwin, etc) */
+#if defined(_BYTE_ORDER) && defined(_BIG_ENDIAN) && _BYTE_ORDER == _BIG_ENDIAN
+
+#define SHA1DC_BIGENDIAN
+
+#else /* Not under GCC-alike or glibc or *BSD or newlib or <processor whitelist> */
+
 #if (defined(__ARMEB__) || defined(__THUMBEB__) || defined(__AARCH64EB__) || \
      defined(__MIPSEB__) || defined(__MIPSEB) || defined(_MIPSEB) || \
      defined(__sparc))
@@ -79,21 +89,23 @@
  */
 #define SHA1DC_BIGENDIAN
 
-#else /* Not under GCC-alike or glibc or <processor whitelist> */
+#else /* Not under GCC-alike or glibc or *BSD or newlib or <processor whitelist> */
 
 #if defined(SHA1DC_ON_INTEL_LIKE_PROCESSOR)
+
 /*
  * As a last resort before we do anything else we're not 100% sure
  * about below, we blacklist specific processors here. We could add
  * more, see e.g. https://wiki.debian.org/ArchitectureSpecificsMemo
  */
-#else /* Not under GCC-alike or glibc or <processor whitelist>  or <processor blacklist> */
+#else /* Not under GCC-alike or glibc or *BSD or newlib or <processor whitelist>  or <processor blacklist> */
 
 /* We do nothing more here for now */
 /*#error "Uncomment this to see if you fall through all the detection"*/
 
 #endif /* !SHA1DC_ON_INTEL_LIKE_PROCESSOR */
 #endif /* Big Endian under whitelist of processors */
+#endif /* Big Endian under *BSD and newlib */
 #endif /* Big Endian under glibc */
 #endif /* Big Endian under GCC-alike */
 
