@@ -59,18 +59,52 @@
 
 #else /* Not under GCC-alike */
 
-#if defined(__BYTE_ORDER) && defined(__BIG_ENDIAN)
+/*
+ * On glibc we need to compare __BIG_ENDIAN == __BYTE_ORDER, ditto BSD
+ * and newlib (Cygwin etc.). However on Solaris and possibly some
+ * other systems we just have _BIG_ENDIAN defined with no value.
+ *
+ * So use some macro hacks to only define SHA1DC_BIG_ENDIAN_VALUE and
+ * SHA1DC_BYTE_ORDER_VALUE to the values the platform-specific
+ * constants are defined to *if* the constant is not empty. This
+ * relies on string-concat-ing the number (or empty value) the macro
+ * defines.
+ */
+#define SHA1DC_EMPTY_VAL(x) x ## 1
+#define SHA1DC_EMPTY(x) SHA1DC_EMPTY_VAL(x)
+#define SHA1DC_IS_EMPTY(x) (SHA1DC_EMPTY(x) == 1)
+
+#if (defined(_BIG_ENDIAN) && !SHA1DC_IS_EMPTY(_BIG_ENDIAN))
+#define SHA1DC_BIG_ENDIAN_VALUE _BIG_ENDIAN
+#else
+#if (defined(__BIG_ENDIAN) && !SHA1DC_IS_EMPTY(__BIG_ENDIAN))
+#define SHA1DC_BIG_ENDIAN_VALUE __BIG_ENDIAN
+#endif
+#endif
+
+#if (defined(_BYTE_ORDER) && !SHA1DC_IS_EMPTY(_BYTE_ORDER))
+#define SHA1DC_BYTE_ORDER_VALUE _BYTE_ORDER
+#else
+#if (defined(__BYTE_ORDER) && !SHA1DC_IS_EMPTY(__BYTE_ORDER))
+#define SHA1DC_BYTE_ORDER_VALUE __BYTE_ORDER
+#endif
+#endif
+
+#if defined(SHA1DC_BYTE_ORDER_VALUE) && defined(SHA1DC_BIG_ENDIAN_VALUE)
 /*
  * Should detect Big Endian under glibc.git since 14245eb70e ("entered
  * into RCS", 1992-11-25). Defined in <endian.h> which will have been
  * brought in by standard headers. See glibc.git and
  * https://sourceforge.net/p/predef/wiki/Endianness/
+ *
+ * Also works for *BSD et al which define _X instead of __X with the
+ * macro hackery above.
  */
-#if __BYTE_ORDER == __BIG_ENDIAN
+#if SHA1DC_BYTE_ORDER_VALUE == SHA1DC_BIG_ENDIAN_VALUE
 #define SHA1DC_BIGENDIAN
 #endif
 
-#else /* Not under GCC-alike or glibc */
+#else /* Not under GCC-alike or glibc/BSD/et al */
 
 #if (defined(__ARMEB__) || defined(__THUMBEB__) || defined(__AARCH64EB__) || \
      defined(__MIPSEB__) || defined(__MIPSEB) || defined(_MIPSEB) || \
@@ -82,7 +116,7 @@
  */
 #define SHA1DC_BIGENDIAN
 
-#else /* Not under GCC-alike or glibc or <processor whitelist> */
+#else /* Not under GCC-alike or glibc/BSD/et al or <processor whitelist> */
 
 #if defined(SHA1DC_ON_INTEL_LIKE_PROCESSOR)
 /*
@@ -90,14 +124,14 @@
  * about below, we blacklist specific processors here. We could add
  * more, see e.g. https://wiki.debian.org/ArchitectureSpecificsMemo
  */
-#else /* Not under GCC-alike or glibc or <processor whitelist>  or <processor blacklist> */
+#else /* Not under GCC-alike or glibc/BSD/et al or <processor whitelist>  or <processor blacklist> */
 
 /* We do nothing more here for now */
 /*#error "Uncomment this to see if you fall through all the detection"*/
 
 #endif /* !SHA1DC_ON_INTEL_LIKE_PROCESSOR */
 #endif /* Big Endian under whitelist of processors */
-#endif /* Big Endian under glibc */
+#endif /* Big Endian under glibc/BSD/et al */
 #endif /* Big Endian under GCC-alike */
 
 #if (defined(SHA1DC_FORCE_LITTLEENDIAN) && defined(SHA1DC_BIGENDIAN))
